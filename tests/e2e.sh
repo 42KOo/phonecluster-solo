@@ -1,7 +1,7 @@
 #!/bin/sh
 # tests/e2e.sh
 # Simulates the full lifecycle of a PhoneCluster Solo node:
-#   boot → register → heartbeat loop → verify status → simulate offline → verify detection
+#   boot -> register -> heartbeat loop -> verify status -> simulate offline -> verify detection
 #
 # Runs against a live coordinator on $COORDINATOR_BASE_URL.
 # Exit 0 = all checks passed. Exit 1 = failure (message printed).
@@ -19,9 +19,9 @@ FAIL=0
 # Helpers
 ###############################################################################
 
-green() { printf '\033[32m✔\033[0m  %s\n' "$*"; }
-red()   { printf '\033[31m✘\033[0m  %s\n' "$*"; }
-info()  { printf '\033[34m→\033[0m  %s\n' "$*"; }
+green() { printf '\033[32m[OK]\033[0m  %s\n' "$*"; }
+red()   { printf '\033[31m[FAIL]\033[0m  %s\n' "$*"; }
+info()  { printf '\033[34m->\033[0m  %s\n' "$*"; }
 
 assert_eq() {
     LABEL="$1"; EXPECTED="$2"; ACTUAL="$3"
@@ -174,9 +174,9 @@ assert_eq "events?limit=1 returns at most 1 item" "1" "$COUNT_2"
 ###############################################################################
 
 echo ""
-echo "─────────────────────────────────────────"
+echo "-----------------------------------------"
 printf "  Passed: \033[32m%s\033[0m\n" "$PASS"
 printf "  Failed: \033[31m%s\033[0m\n" "$FAIL"
-echo "─────────────────────────────────────────"
+echo "-----------------------------------------"
 
 [ "$FAIL" -eq 0 ] || exit 1

@@ -1,6 +1,6 @@
 """
 tests/test_coordinator_integration.py
-Integration tests — coordinator must be running on 127.0.0.1:7777 before these run.
+Integration tests - coordinator must be running on 127.0.0.1:7777 before these run.
 The CI workflow starts it in a background step.
 """
 

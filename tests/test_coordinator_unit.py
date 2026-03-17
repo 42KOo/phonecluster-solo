@@ -1,6 +1,6 @@
 """
 tests/test_coordinator_unit.py
-Unit tests for coordinator.py — no server needed, tests functions directly.
+Unit tests for coordinator.py - no server needed, tests functions directly.
 """
 
 import os
@@ -56,7 +56,7 @@ class TestSelfRegister:
         config = tmp_path / "config.env"
         config.write_text("NODE_ID=test-solo\nNODE_ROLE=solo\n")
 
-        # Patch the config path constant directly — avoids clobbering sqlite's open calls
+        # Patch the config path constant directly - avoids clobbering sqlite's open calls
         # Write to the exact path the coordinator reads
         real_config = "/tmp/phonecluster_test_config.env"
         with open(real_config, "w") as f:

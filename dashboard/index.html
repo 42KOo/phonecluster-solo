@@ -185,13 +185,13 @@ footer { text-align: center; color: var(--muted); font-size: 11px; padding: 24px
 
 <header>
   <div class="logo">
-    <span class="icon">📱</span>
+    <span class="icon">[PHONE]</span>
     PhoneCluster <span style="color:var(--muted);font-weight:400;margin-left:6px">Solo</span>
   </div>
   <div class="header-right">
     <span id="conn-pill" class="pill loading"><span class="spin"></span>Connecting</span>
-    <span id="last-update">—</span>
-    <button id="cfg-btn" type="button">⚙ Config</button>
+    <span id="last-update">--</span>
+    <button id="cfg-btn" type="button">[GEAR] Config</button>
   </div>
 </header>
 
@@ -202,25 +202,25 @@ footer { text-align: center; color: var(--muted); font-size: 11px; padding: 24px
   <div class="stat-grid">
     <div class="stat">
       <div class="label">CPU</div>
-      <div class="val blue" id="m-cpu">—</div>
+      <div class="val blue" id="m-cpu">--</div>
       <div class="gauge-wrap"><div class="gauge-bar"><div class="gauge-fill cpu" id="g-cpu" style="width:0%"></div></div></div>
     </div>
     <div class="stat">
       <div class="label">Memory</div>
-      <div class="val" style="color:var(--purple)" id="m-mem">—</div>
-      <div class="sub" id="m-mem-sub">—</div>
+      <div class="val" style="color:var(--purple)" id="m-mem">--</div>
+      <div class="sub" id="m-mem-sub">--</div>
       <div class="gauge-wrap"><div class="gauge-bar"><div class="gauge-fill mem" id="g-mem" style="width:0%"></div></div></div>
     </div>
     <div class="stat">
       <div class="label">Storage</div>
-      <div class="val orange" id="m-disk">—</div>
-      <div class="sub" id="m-disk-sub">—</div>
+      <div class="val orange" id="m-disk">--</div>
+      <div class="sub" id="m-disk-sub">--</div>
       <div class="gauge-wrap"><div class="gauge-bar"><div class="gauge-fill disk" id="g-disk" style="width:0%"></div></div></div>
     </div>
     <div class="stat">
       <div class="label">Node</div>
-      <div class="val green" id="m-node" style="font-size:16px;padding-top:4px">—</div>
-      <div class="sub" id="m-uptime">—</div>
+      <div class="val green" id="m-node" style="font-size:16px;padding-top:4px">--</div>
+      <div class="sub" id="m-uptime">--</div>
     </div>
   </div>
 
@@ -238,19 +238,19 @@ footer { text-align: center; color: var(--muted); font-size: 11px; padding: 24px
         <th>Time</th><th>Node</th><th>Event</th><th>Detail</th>
       </tr></thead>
       <tbody id="events-body">
-        <tr><td colspan="4" style="color:var(--muted);text-align:center;padding:18px">Loading…</td></tr>
+        <tr><td colspan="4" style="color:var(--muted);text-align:center;padding:18px">Loading...</td></tr>
       </tbody>
     </table>
   </div>
 
 </main>
 
-<footer>PhoneCluster — turn old phones into a mini cloud</footer>
+<footer>PhoneCluster -- turn old phones into a mini cloud</footer>
 
 <!-- Config modal -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
-    <h2>Dashboard Config</h2>
+    <h2>Dashboard Configuration</h2>
     <label for="cfg-url">Coordinator URL</label>
     <input id="cfg-url" type="text" placeholder="http://localhost:7000" autocomplete="off">
     <label for="cfg-key">API Key</label>
@@ -274,11 +274,11 @@ let cfg = {
 };
 
 const SERVICES = [
-  { name: 'File Browser', path: '/files',   port: 8080, icon: '📁' },
-  { name: 'Syncthing',    path: '/sync',    port: 8080, icon: '🔄' },
-  { name: 'Metrics',      path: '/metrics', port: 8080, icon: '📊' },
-  { name: 'Coordinator',  path: '/health',  port: 7777, icon: '🧠', internal: true },
-  { name: 'Caddy',        path: '/ping',    port: 8080, icon: '🔀', pingPath: true },
+  { name: 'File Browser', path: '/files',   port: 8080, icon: '[DIR]' },
+  { name: 'Syncthing',    path: '/sync',    port: 8080, icon: '[SYNC]' },
+  { name: 'Metrics',      path: '/metrics', port: 8080, icon: '[CHART]' },
+  { name: 'Coordinator',  path: '/health',  port: 7777, icon: '[API]', internal: true },
+  { name: 'Caddy',        path: '/ping',    port: 8080, icon: '[CADDY]', pingPath: true },
 ];
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -325,10 +325,10 @@ async function ping(url) {
 ///////////////////////////////////////////////////////////////////////////////
 
 function fmt_ts(ts) {
-  return ts ? new Date(ts * 1000).toLocaleTimeString() : '—';
+  return ts ? new Date(ts * 1000).toLocaleTimeString() : '--';
 }
 function ago(ts) {
-  if (!ts) return '—';
+  if (!ts) return '--';
   const s = Math.floor(Date.now() / 1000 - ts);
   if (s < 60)   return s + 's ago';
   if (s < 3600) return Math.floor(s/60) + 'm ago';
@@ -412,7 +412,7 @@ function renderEvents(events) {
       <td style="color:var(--muted)">${fmt_ts(e.ts)}</td>
       <td>${e.node_id}</td>
       <td class="${cls}">${e.event_type}</td>
-      <td style="color:var(--muted)">${e.detail || '—'}</td>
+      <td style="color:var(--muted)">${e.detail || '--'}</td>
     </tr>`;
   }).join('');
 }
@@ -442,12 +442,12 @@ async function refresh() {
     await renderServices(ip === '127.0.0.1' ? window.location.hostname : ip);
 
     pill.className = 'pill ok';
-    pill.textContent = '● Online';
+    pill.textContent = '* Online';
     document.getElementById('last-update').textContent =
       'Updated ' + new Date().toLocaleTimeString();
   } catch (err) {
     pill.className = 'pill error';
-    pill.textContent = '✕ ' + err.message;
+    pill.textContent = 'x ' + err.message;
   }
 }
 

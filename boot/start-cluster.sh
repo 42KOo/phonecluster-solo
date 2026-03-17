@@ -25,7 +25,7 @@ while true; do
         --content "Running (started $(date +%H:%M))" \
         --ongoing --priority high 2>/dev/null || true
 
-    # s6-svscan is PID 1 inside the rootfs — supervises all services
+    # s6-svscan is PID 1 inside the rootfs - supervises all services
     proot-distro login archlinux -- /usr/bin/s6-svscan /run/service >> "$LOG" 2>&1
 
     CODE=$?
