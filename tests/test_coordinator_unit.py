@@ -6,7 +6,6 @@ Unit tests for coordinator.py — no server needed, tests functions directly.
 import os
 import sys
 import time
-import tempfile
 import sqlite3
 import pytest
 
@@ -58,12 +57,6 @@ class TestSelfRegister:
         config.write_text("NODE_ID=test-solo\nNODE_ROLE=solo\n")
 
         # Patch the config path constant directly — avoids clobbering sqlite's open calls
-        import unittest.mock as mock
-        with mock.patch.object(tmp_db, "__file__", str(tmp_path)):
-            original = tmp_db.self_register.__code__.co_consts
-            # Simplest safe approach: monkeypatch the config path via env or direct call
-            pass
-
         # Write to the exact path the coordinator reads
         real_config = "/tmp/phonecluster_test_config.env"
         with open(real_config, "w") as f:

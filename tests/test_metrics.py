@@ -5,7 +5,6 @@ Coordinator must be running before these run.
 """
 
 import os
-import pytest
 import requests
 
 BASE    = os.environ.get("COORDINATOR_BASE_URL", "http://127.0.0.1:7777")

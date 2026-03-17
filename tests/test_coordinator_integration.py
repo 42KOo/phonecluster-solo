@@ -6,7 +6,6 @@ The CI workflow starts it in a background step.
 
 import os
 import time
-import pytest
 import requests
 
 BASE    = os.environ.get("COORDINATOR_BASE_URL", "http://127.0.0.1:7777")

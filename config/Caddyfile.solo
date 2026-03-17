@@ -1,5 +1,4 @@
 # Caddyfile — PhoneCluster Solo
-# All services on port 8080. Dashboard + coordinator on port 7000.
 # {{NODE_ID}} is replaced by install.sh
 
 # ── Main service port ─────────────────────────────────────────────────────────
@@ -9,39 +8,26 @@
         format console
     }
 
-    # Health
-    respond /ping 200 {
-        body "ok"
-        close
-    }
-
-    # Node info
+    respond /ping "ok" 200
     respond /info "node={{NODE_ID}} role=solo version=1.0.0" 200
 
-    # File Browser — web UI for /data/phonecluster/files
     handle /files* {
         uri strip_prefix /files
         reverse_proxy 127.0.0.1:8081
     }
 
-    # Syncthing web UI
     handle /sync* {
         uri strip_prefix /sync
         reverse_proxy 127.0.0.1:8384 {
-            # Syncthing requires the right host header
             header_up Host "127.0.0.1:8384"
         }
     }
 
-    # Prometheus metrics
     handle /metrics* {
         reverse_proxy 127.0.0.1:9100
     }
 
-    # Index — redirect to dashboard
-    handle / {
-        redir / http://localhost:7000 302
-    }
+    redir / http://localhost:7000 302
 }
 
 # ── Dashboard + coordinator API ───────────────────────────────────────────────
@@ -51,19 +37,16 @@
         format console
     }
 
-    # Coordinator REST API
     handle /api/* {
         uri strip_prefix /api
         reverse_proxy 127.0.0.1:7777
     }
 
-    # Dashboard static files
     handle /dashboard/* {
         uri strip_prefix /dashboard
         root * /opt/dashboard
         file_server
     }
 
-    # Root redirects to dashboard
     redir / /dashboard/ 302
 }
