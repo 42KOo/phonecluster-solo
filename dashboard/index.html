@@ -143,7 +143,7 @@ tr:hover td { background: rgba(255,255,255,.015); }
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 10px; padding: 24px; width: 340px;
 }
-.modal h3 { margin-bottom: 16px; }
+.modal h2 { margin-bottom: 16px; }
 .modal label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
 .modal input {
   width: 100%; background: var(--bg); border: 1px solid var(--border);
@@ -250,7 +250,7 @@ footer { text-align: center; color: var(--muted); font-size: 11px; padding: 24px
 <!-- Config modal -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
-    <h3>Dashboard Config</h3>
+    <h2>Dashboard Config</h2>
     <label for="cfg-url">Coordinator URL</label>
     <input id="cfg-url" type="text" placeholder="http://localhost:7000" autocomplete="off">
     <label for="cfg-key">API Key</label>
@@ -392,7 +392,7 @@ async function renderServices(baseIp) {
       <div class="svc-url">
         ${svc.internal
           ? `<span style="color:var(--muted)">internal</span>`
-          : `<a href="${open}" target="_blank">${open}</a>`}
+          : `<a href="${open}" target="_blank" rel="noopener noreferrer">${open}</a>`}
       </div>`;
     grid.appendChild(card);
   }

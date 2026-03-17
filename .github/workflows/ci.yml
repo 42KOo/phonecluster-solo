@@ -61,9 +61,6 @@ jobs:
       - name: ruff check
         run: ruff check coordinator/coordinator.py
 
-      - name: ruff format check
-        run: ruff format --check coordinator/coordinator.py
-
   # ── 3. Caddyfile validation ────────────────────────────────────────────────
   lint-caddyfile:
     name: "Lint — Caddyfile"

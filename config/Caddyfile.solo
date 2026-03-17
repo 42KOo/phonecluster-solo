@@ -1,7 +1,7 @@
-# Caddyfile — PhoneCluster Solo
+# Caddyfile - PhoneCluster Solo
 # {{NODE_ID}} is replaced by install.sh
 
-# ── Main service port ─────────────────────────────────────────────────────────
+# -- Main service port ---------------------------------------------------------
 :8080 {
     log {
         output file /var/log/phonecluster/caddy.log
@@ -30,7 +30,7 @@
     redir / http://localhost:7000 302
 }
 
-# ── Dashboard + coordinator API ───────────────────────────────────────────────
+# -- Dashboard + coordinator API -----------------------------------------------
 :7000 {
     log {
         output file /var/log/phonecluster/caddy-dashboard.log
