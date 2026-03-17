@@ -1,0 +1,278 @@
+name: PhoneCluster CI
+
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+    branches: ["main"]
+
+###############################################################################
+# Shared env available to all jobs
+###############################################################################
+env:
+  PC_API_KEY:            "test-api-key-ci"
+  PC_COORDINATOR_PORT:   "7777"
+  PC_DB_PATH:            "/tmp/phonecluster-test.db"
+  NODE_ID:               "ci-node"
+  NODE_ROLE:             "solo"
+  COORDINATOR_BASE_URL:  "http://127.0.0.1:7777"
+
+###############################################################################
+jobs:
+###############################################################################
+
+  # ── 1. Shell script linting ────────────────────────────────────────────────
+  lint-shell:
+    name: "Lint — shell scripts"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+
+      - name: Lint install.sh + bootstrap-rootfs.sh + boot script
+        run: |
+          shellcheck -S warning \
+            install.sh \
+            bootstrap-rootfs.sh \
+            boot/start-cluster.sh \
+            bin/phonecluster-run
+
+      - name: Lint s6 service run scripts
+        run: |
+          # s6 run scripts have no shebang env — tell shellcheck they're sh
+          find services -name run | xargs shellcheck -S warning -s sh
+
+  # ── 2. Python linting ──────────────────────────────────────────────────────
+  lint-python:
+    name: "Lint — Python"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linters
+        run: pip install ruff
+
+      - name: ruff check
+        run: ruff check coordinator/coordinator.py
+
+      - name: ruff format check
+        run: ruff format --check coordinator/coordinator.py
+
+  # ── 3. Caddyfile validation ────────────────────────────────────────────────
+  lint-caddyfile:
+    name: "Lint — Caddyfile"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Caddy
+        run: |
+          sudo apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl
+          curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+            | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+          curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+            | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+          sudo apt-get update && sudo apt-get install -y caddy
+
+      - name: Substitute template variables
+        run: |
+          sed 's|{{NODE_ID}}|ci-node|g' config/Caddyfile.solo > /tmp/Caddyfile.test
+
+      - name: Validate Caddyfile
+        run: caddy validate --config /tmp/Caddyfile.test --adapter caddyfile
+
+  # ── 4. Dashboard HTML validation ──────────────────────────────────────────
+  lint-dashboard:
+    name: "Lint — dashboard HTML"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install html-validate
+        run: npm install -g html-validate
+
+      - name: Validate index.html
+        # We allow inline scripts/styles (intentional single-file design)
+        run: |
+          cat > /tmp/.htmlvalidate.json << 'EOF'
+          {
+            "extends": ["html-validate:recommended"],
+            "rules": {
+              "no-inline-style": "off",
+              "script-type": "off",
+              "require-sri": "off",
+              "long-title": "off"
+            }
+          }
+          EOF
+          html-validate --config /tmp/.htmlvalidate.json dashboard/index.html
+
+  # ── 5. Coordinator unit tests ──────────────────────────────────────────────
+  test-coordinator-unit:
+    name: "Test — coordinator unit"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install flask pytest pytest-cov
+
+      - name: Run unit tests
+        run: pytest tests/test_coordinator_unit.py -v --tb=short --cov=coordinator --cov-report=term-missing
+
+  # ── 6. Coordinator integration tests ──────────────────────────────────────
+  test-coordinator-integration:
+    name: "Test — coordinator integration"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install flask pytest requests
+
+      - name: Start coordinator in background
+        run: |
+          mkdir -p /tmp/phonecluster
+          python3 coordinator/coordinator.py &
+          echo $! > /tmp/coordinator.pid
+          # Wait until it's accepting connections
+          for i in $(seq 1 20); do
+            curl -sf http://127.0.0.1:7777/health && break
+            echo "Waiting for coordinator... ($i)"
+            sleep 1
+          done
+
+      - name: Run integration tests
+        run: pytest tests/test_coordinator_integration.py -v --tb=short
+
+      - name: Stop coordinator
+        if: always()
+        run: kill $(cat /tmp/coordinator.pid) 2>/dev/null || true
+
+  # ── 7. Full end-to-end flow ────────────────────────────────────────────────
+  test-e2e:
+    name: "Test — end-to-end flow"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install flask requests
+
+      - name: Start coordinator
+        run: |
+          mkdir -p /tmp/phonecluster
+          python3 coordinator/coordinator.py &
+          echo $! > /tmp/coordinator.pid
+          for i in $(seq 1 20); do
+            curl -sf http://127.0.0.1:7777/health && break
+            sleep 1
+          done
+
+      - name: Run e2e scenario
+        run: bash tests/e2e.sh
+
+      - name: Dump coordinator logs on failure
+        if: failure()
+        run: |
+          echo "=== /tmp/phonecluster contents ==="
+          ls -la /tmp/phonecluster/ || true
+          echo "=== DB contents (if any) ==="
+          python3 -c "
+          import sqlite3, json
+          try:
+              db = sqlite3.connect('/tmp/phonecluster-test.db')
+              db.row_factory = sqlite3.Row
+              nodes  = [dict(r) for r in db.execute('SELECT * FROM nodes').fetchall()]
+              events = [dict(r) for r in db.execute('SELECT * FROM events').fetchall()]
+              print('NODES:', json.dumps(nodes, indent=2))
+              print('EVENTS:', json.dumps(events, indent=2))
+          except Exception as e:
+              print('Could not read DB:', e)
+          " || true
+
+      - name: Stop coordinator
+        if: always()
+        run: kill $(cat /tmp/coordinator.pid) 2>/dev/null || true
+
+  # ── 8. Metrics endpoint test ───────────────────────────────────────────────
+  test-metrics:
+    name: "Test — metrics endpoint"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install flask requests pytest
+
+      - name: Start coordinator
+        run: |
+          mkdir -p /tmp/phonecluster
+          python3 coordinator/coordinator.py &
+          echo $! > /tmp/coordinator.pid
+          for i in $(seq 1 20); do
+            curl -sf http://127.0.0.1:7777/health && break
+            sleep 1
+          done
+
+      - name: Run metrics tests
+        run: pytest tests/test_metrics.py -v --tb=short
+
+      - name: Stop coordinator
+        if: always()
+        run: kill $(cat /tmp/coordinator.pid) 2>/dev/null || true
+
+  # ── 9. Summary gate ───────────────────────────────────────────────────────
+  # All jobs must pass before a PR can be merged.
+  ci-gate:
+    name: "CI gate"
+    needs:
+      - lint-shell
+      - lint-python
+      - lint-caddyfile
+      - lint-dashboard
+      - test-coordinator-unit
+      - test-coordinator-integration
+      - test-e2e
+      - test-metrics
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          results='${{ toJSON(needs) }}'
+          echo "$results" | python3 -c "
+          import sys, json
+          needs = json.load(sys.stdin)
+          failed = [name for name, job in needs.items() if job['result'] != 'success']
+          if failed:
+              print('FAILED jobs:', ', '.join(failed))
+              sys.exit(1)
+          print('All jobs passed.')
+          "

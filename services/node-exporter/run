@@ -1,0 +1,11 @@
+#!/bin/sh
+# s6 service: node-exporter — Prometheus metrics
+exec node_exporter \
+    --web.listen-address=127.0.0.1:9100 \
+    --collector.disable-defaults \
+    --collector.cpu \
+    --collector.meminfo \
+    --collector.diskstats \
+    --collector.filesystem \
+    --collector.netdev \
+    2>&1

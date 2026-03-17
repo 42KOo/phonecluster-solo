@@ -1,0 +1,94 @@
+#!/bin/sh
+# phonecluster-run — proot-based OCI container runner
+# Replaces uDocker. No Docker daemon, no kernel compatibility hell.
+#
+# Usage:
+#   phonecluster-run <image> [--name NAME] [--port HOST:CTR] [--env K=V]
+#                            [--volume HOST:CTR] [--pull] [--rm] [-- cmd args]
+#
+# Requires inside rootfs: skopeo, umoci
+#   pacman -S skopeo umoci
+
+set -e
+
+IMAGES_DIR="${PC_IMAGES_DIR:-/data/phonecluster/images}"
+PIDS_DIR="${PC_PIDS_DIR:-/data/phonecluster/pids}"
+mkdir -p "$IMAGES_DIR" "$PIDS_DIR"
+
+info() { printf '\033[1;34m[pc-run]\033[0m %s\n' "$*"; }
+die()  { printf '\033[1;31m[pc-run]\033[0m %s\n' "$*" >&2; exit 1; }
+
+[ $# -lt 1 ] && { echo "Usage: phonecluster-run <image> [options] [-- cmd]"; exit 1; }
+
+IMAGE="$1"; shift
+NAME="" ENVS="" VOLUMES="" EXTRA_CMD="" DO_PULL=0 DO_RM=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --name)   NAME="$2";           shift 2 ;;
+        --env)    ENVS="$ENVS $2";    shift 2 ;;
+        --volume) VOLUMES="$VOLUMES $2"; shift 2 ;;
+        --port)   shift 2 ;;  # informational only — proot shares host network
+        --pull)   DO_PULL=1; shift ;;
+        --rm)     DO_RM=1;   shift ;;
+        --)       shift; EXTRA_CMD="$*"; break ;;
+        *) die "Unknown option: $1" ;;
+    esac
+done
+
+[ -z "$NAME" ] && NAME="$(echo "$IMAGE" | tr '/:' '-')"
+IMAGE_DIR="$IMAGES_DIR/$NAME"
+
+# Pull
+if [ ! -d "$IMAGE_DIR" ] || [ "$DO_PULL" = "1" ]; then
+    command -v skopeo >/dev/null 2>&1 || die "skopeo not found. Run: pacman -S skopeo umoci"
+    command -v umoci  >/dev/null 2>&1 || die "umoci not found. Run: pacman -S skopeo umoci"
+
+    info "Pulling $IMAGE..."
+    OCI_TMP="$IMAGES_DIR/${NAME}.oci"
+    rm -rf "$OCI_TMP"
+
+    # Normalise registry
+    REF="$IMAGE"
+    echo "$REF" | grep -qv '\.' && REF="docker.io/$REF"
+    echo "$REF" | grep -qv '/'  && REF="docker.io/library/$REF"
+
+    skopeo copy --override-arch arm64 --override-os linux \
+        "docker://$REF" "oci:$OCI_TMP:latest"
+
+    info "Unpacking..."
+    rm -rf "$IMAGE_DIR"
+    umoci unpack --image "$OCI_TMP:latest" "$IMAGE_DIR"
+    rm -rf "$OCI_TMP"
+    info "Image ready."
+fi
+
+ROOTFS="$IMAGE_DIR/rootfs"
+
+# Build proot command
+CMD="proot --rootfs=$ROOTFS"
+CMD="$CMD --bind=/proc --bind=/dev --bind=/sys --bind=/tmp"
+CMD="$CMD --bind=/data/phonecluster:/data"
+
+for vol in $VOLUMES; do
+    host="${vol%%:*}"; ctr="${vol##*:}"
+    mkdir -p "$host"
+    CMD="$CMD --bind=$host:$ctr"
+done
+
+# Determine entrypoint
+if [ -z "$EXTRA_CMD" ]; then
+    CONFIG="$IMAGE_DIR/config.json"
+    if [ -f "$CONFIG" ] && command -v jq >/dev/null 2>&1; then
+        EXTRA_CMD="$(jq -r '(.config.Entrypoint//[]) + (.config.Cmd//[]) | join(" ")' "$CONFIG")"
+    fi
+    [ -z "$EXTRA_CMD" ] && EXTRA_CMD="/bin/sh"
+fi
+
+info "Starting '$NAME': $EXTRA_CMD"
+env $ENVS $CMD /bin/sh -c "$EXTRA_CMD" &
+PID=$!
+echo $PID > "$PIDS_DIR/${NAME}.pid"
+info "PID: $PID"
+wait $PID
+[ "$DO_RM" = "1" ] && rm -rf "$IMAGE_DIR"

@@ -1,0 +1,31 @@
+#!/bin/sh
+# s6 service: rclone — offsite backup sync loop
+# Only actively syncs if RCLONE_DEST is configured in config.env.
+. /etc/phonecluster/config.env
+
+LOG="/var/log/phonecluster/rclone.log"
+INTERVAL="${RCLONE_INTERVAL:-3600}"
+SRC="${RCLONE_SRC:-/data/phonecluster/files}"
+DEST="${RCLONE_DEST:-}"
+
+if [ -z "$DEST" ]; then
+    echo "$(date): RCLONE_DEST not set — rclone sync disabled. Set it in /etc/phonecluster/config.env" >> "$LOG"
+    # Sleep forever so s6 doesn't spin-restart us
+    exec sleep infinity
+fi
+
+echo "$(date): rclone sync service started. src=$SRC dest=$DEST interval=${INTERVAL}s" >> "$LOG"
+
+while true; do
+    echo "$(date): syncing $SRC -> $DEST" >> "$LOG"
+    rclone sync "$SRC" "$DEST" \
+        --config /etc/phonecluster/rclone.conf \
+        --transfers 2 \
+        --checkers 4 \
+        --retries 3 \
+        --retries-sleep 30s \
+        --log-file "$LOG" \
+        --log-level INFO
+    echo "$(date): sync done (exit $?)" >> "$LOG"
+    sleep "$INTERVAL"
+done

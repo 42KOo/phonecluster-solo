@@ -1,0 +1,14 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",   # line too long — handled by formatter
+    "E402",   # module-level import not at top (coordinator has env-dependent imports)
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

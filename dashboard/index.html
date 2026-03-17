@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PhoneCluster Solo</title>
+<style>
+:root {
+  --bg:      #0d1117;
+  --surface: #161b22;
+  --border:  #30363d;
+  --text:    #e6edf3;
+  --muted:   #8b949e;
+  --green:   #3fb950;
+  --red:     #f85149;
+  --yellow:  #d29922;
+  --blue:    #58a6ff;
+  --purple:  #bc8cff;
+  --orange:  #f0883e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 13px; min-height: 100vh;
+}
+
+/* Header */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px; border-bottom: 1px solid var(--border);
+  background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.logo { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; }
+.logo .icon { font-size: 20px; }
+.header-right { display: flex; gap: 12px; align-items: center; }
+.pill {
+  padding: 3px 10px; border-radius: 20px; font-size: 11px;
+  font-weight: 600; letter-spacing: .3px;
+}
+.pill.ok      { background: rgba(63,185,80,.12); color: var(--green); border: 1px solid rgba(63,185,80,.25); }
+.pill.error   { background: rgba(248,81,73,.12); color: var(--red);   border: 1px solid rgba(248,81,73,.25); }
+.pill.loading { background: rgba(88,166,255,.1); color: var(--blue);  border: 1px solid rgba(88,166,255,.2); }
+#last-update { color: var(--muted); font-size: 11px; }
+
+/* Layout */
+main { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+
+/* Section titles */
+.section-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin: 24px 0 10px;
+}
+.section-title:first-child { margin-top: 0; }
+
+/* Stat grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px; margin-bottom: 4px;
+}
+.stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px;
+}
+.stat .label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .7px; margin-bottom: 6px; }
+.stat .val   { font-size: 26px; font-weight: 700; line-height: 1; }
+.stat .sub   { color: var(--muted); font-size: 10px; margin-top: 4px; }
+.green  { color: var(--green); }
+.red    { color: var(--red); }
+.blue   { color: var(--blue); }
+.yellow { color: var(--yellow); }
+.orange { color: var(--orange); }
+
+/* Gauge bar */
+.gauge-wrap { margin-top: 8px; }
+.gauge-bar {
+  height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
+}
+.gauge-fill {
+  height: 100%; border-radius: 2px; transition: width .5s ease;
+}
+.gauge-fill.cpu  { background: var(--blue); }
+.gauge-fill.mem  { background: var(--purple); }
+.gauge-fill.disk { background: var(--orange); }
+
+/* Service cards */
+.svc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+}
+.svc-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.svc-header { display: flex; justify-content: space-between; align-items: center; }
+.svc-name   { font-weight: 700; font-size: 13px; }
+.svc-status {
+  font-size: 10px; font-weight: 600; padding: 2px 7px;
+  border-radius: 12px; letter-spacing: .3px;
+}
+.svc-status.up   { background: rgba(63,185,80,.12); color: var(--green); border: 1px solid rgba(63,185,80,.2); }
+.svc-status.down { background: rgba(248,81,73,.12); color: var(--red);   border: 1px solid rgba(248,81,73,.2); }
+.svc-url { font-size: 11px; color: var(--muted); }
+.svc-url a { color: var(--blue); text-decoration: none; }
+.svc-url a:hover { text-decoration: underline; }
+
+/* Events table */
+.events-wrap {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; }
+th {
+  background: rgba(255,255,255,.02); text-align: left;
+  padding: 8px 14px; font-size: 10px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .6px;
+  border-bottom: 1px solid var(--border);
+}
+td { padding: 7px 14px; border-bottom: 1px solid rgba(48,54,61,.4); font-size: 12px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,.015); }
+.ev-registered    { color: var(--green); font-weight: 600; }
+.ev-reregistered  { color: var(--blue);  font-weight: 600; }
+.ev-offline       { color: var(--red);   font-weight: 600; }
+
+/* Config modal */
+#cfg-btn {
+  background: none; border: 1px solid var(--border);
+  color: var(--muted); padding: 4px 10px; border-radius: 5px;
+  cursor: pointer; font-family: inherit; font-size: 11px;
+}
+#cfg-btn:hover { color: var(--text); border-color: var(--muted); }
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.6); z-index: 100;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 24px; width: 340px;
+}
+.modal h3 { margin-bottom: 16px; }
+.modal label { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+.modal input {
+  width: 100%; background: var(--bg); border: 1px solid var(--border);
+  border-radius: 5px; padding: 7px 10px; color: var(--text);
+  font-family: inherit; font-size: 12px; margin-bottom: 12px;
+}
+.modal input:focus { outline: none; border-color: var(--blue); }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.btn-primary {
+  background: var(--blue); color: #000; border: none;
+  padding: 6px 14px; border-radius: 5px;
+  cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 700;
+}
+.btn-cancel {
+  background: none; border: 1px solid var(--border);
+  color: var(--muted); padding: 6px 14px; border-radius: 5px;
+  cursor: pointer; font-family: inherit; font-size: 12px;
+}
+
+/* Spinner */
+.spin {
+  display: inline-block; width: 10px; height: 10px;
+  border: 2px solid var(--border); border-top-color: var(--blue);
+  border-radius: 50%; animation: spin .6s linear infinite;
+  vertical-align: middle; margin-right: 4px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+footer { text-align: center; color: var(--muted); font-size: 11px; padding: 24px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="icon">📱</span>
+    PhoneCluster <span style="color:var(--muted);font-weight:400;margin-left:6px">Solo</span>
+  </div>
+  <div class="header-right">
+    <span id="conn-pill" class="pill loading"><span class="spin"></span>Connecting</span>
+    <span id="last-update">—</span>
+    <button id="cfg-btn">⚙ Config</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- System metrics -->
+  <div class="section-title">System</div>
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="label">CPU</div>
+      <div class="val blue" id="m-cpu">—</div>
+      <div class="gauge-wrap"><div class="gauge-bar"><div class="gauge-fill cpu" id="g-cpu" style="width:0%"></div></div></div>
+    </div>
+    <div class="stat">
+      <div class="label">Memory</div>
+      <div class="val" style="color:var(--purple)" id="m-mem">—</div>
+      <div class="sub" id="m-mem-sub">—</div>
+      <div class="gauge-wrap"><div class="gauge-bar"><div class="gauge-fill mem" id="g-mem" style="width:0%"></div></div></div>
+    </div>
+    <div class="stat">
+      <div class="label">Storage</div>
+      <div class="val orange" id="m-disk">—</div>
+      <div class="sub" id="m-disk-sub">—</div>
+      <div class="gauge-wrap"><div class="gauge-bar"><div class="gauge-fill disk" id="g-disk" style="width:0%"></div></div></div>
+    </div>
+    <div class="stat">
+      <div class="label">Node</div>
+      <div class="val green" id="m-node" style="font-size:16px;padding-top:4px">—</div>
+      <div class="sub" id="m-uptime">—</div>
+    </div>
+  </div>
+
+  <!-- Services -->
+  <div class="section-title">Services</div>
+  <div class="svc-grid" id="svc-grid">
+    <!-- populated by JS -->
+  </div>
+
+  <!-- Events -->
+  <div class="section-title">Event Log</div>
+  <div class="events-wrap">
+    <table>
+      <thead><tr>
+        <th>Time</th><th>Node</th><th>Event</th><th>Detail</th>
+      </tr></thead>
+      <tbody id="events-body">
+        <tr><td colspan="4" style="color:var(--muted);text-align:center;padding:18px">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<footer>PhoneCluster — turn old phones into a mini cloud</footer>
+
+<!-- Config modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3>Dashboard Config</h3>
+    <label>Coordinator URL</label>
+    <input id="cfg-url" type="text" placeholder="http://localhost:7000">
+    <label>API Key</label>
+    <input id="cfg-key" type="password" placeholder="changeme">
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modal-cancel">Cancel</button>
+      <button class="btn-primary" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+///////////////////////////////////////////////////////////////////////////////
+// Config
+///////////////////////////////////////////////////////////////////////////////
+
+const origin = window.location.origin;
+let cfg = {
+  url: sessionStorage.getItem('pc_url') || origin.replace(/:7001$/, '') + ':7000',
+  key: sessionStorage.getItem('pc_key') || 'changeme',
+};
+
+const SERVICES = [
+  { name: 'File Browser', path: '/files',   port: 8080, icon: '📁' },
+  { name: 'Syncthing',    path: '/sync',    port: 8080, icon: '🔄' },
+  { name: 'Metrics',      path: '/metrics', port: 8080, icon: '📊' },
+  { name: 'Coordinator',  path: '/health',  port: 7777, icon: '🧠', internal: true },
+  { name: 'Caddy',        path: '/ping',    port: 8080, icon: '🔀', pingPath: true },
+];
+
+///////////////////////////////////////////////////////////////////////////////
+// Modal
+///////////////////////////////////////////////////////////////////////////////
+
+document.getElementById('cfg-btn').addEventListener('click', () => {
+  document.getElementById('cfg-url').value = cfg.url;
+  document.getElementById('cfg-key').value = cfg.key;
+  document.getElementById('modal-overlay').classList.add('open');
+});
+document.getElementById('modal-cancel').addEventListener('click', () =>
+  document.getElementById('modal-overlay').classList.remove('open'));
+document.getElementById('modal-save').addEventListener('click', () => {
+  cfg.url = document.getElementById('cfg-url').value.replace(/\/$/, '');
+  cfg.key = document.getElementById('cfg-key').value;
+  sessionStorage.setItem('pc_url', cfg.url);
+  sessionStorage.setItem('pc_key', cfg.key);
+  document.getElementById('modal-overlay').classList.remove('open');
+  refresh();
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// Fetch helpers
+///////////////////////////////////////////////////////////////////////////////
+
+const headers = () => ({ 'X-API-Key': cfg.key });
+
+async function apiFetch(path) {
+  const r = await fetch(cfg.url + path, { headers: headers() });
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+async function ping(url) {
+  try {
+    const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    return r.ok;
+  } catch { return false; }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Render
+///////////////////////////////////////////////////////////////////////////////
+
+function fmt_ts(ts) {
+  return ts ? new Date(ts * 1000).toLocaleTimeString() : '—';
+}
+function ago(ts) {
+  if (!ts) return '—';
+  const s = Math.floor(Date.now() / 1000 - ts);
+  if (s < 60)   return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  return Math.floor(s/3600) + 'h ago';
+}
+function pct_color(p) {
+  if (p >= 90) return 'var(--red)';
+  if (p >= 70) return 'var(--yellow)';
+  return null;
+}
+
+function renderMetrics(m) {
+  if (!m) return;
+  const cpu = m.cpu?.percent;
+  if (cpu !== null && cpu !== undefined) {
+    document.getElementById('m-cpu').textContent = cpu + '%';
+    document.getElementById('g-cpu').style.width = cpu + '%';
+    const c = pct_color(cpu);
+    if (c) document.getElementById('m-cpu').style.color = c;
+  }
+  if (m.mem) {
+    document.getElementById('m-mem').textContent = m.mem.percent + '%';
+    document.getElementById('m-mem-sub').textContent = `${m.mem.used_mb} / ${m.mem.total_mb} MB`;
+    document.getElementById('g-mem').style.width = m.mem.percent + '%';
+    const c = pct_color(m.mem.percent);
+    if (c) document.getElementById('m-mem').style.color = c;
+  }
+  if (m.disk) {
+    document.getElementById('m-disk').textContent = m.disk.percent + '%';
+    document.getElementById('m-disk-sub').textContent = `${m.disk.used_gb} / ${m.disk.total_gb} GB`;
+    document.getElementById('g-disk').style.width = m.disk.percent + '%';
+    const c = pct_color(m.disk.percent);
+    if (c) document.getElementById('m-disk').style.color = c;
+  }
+}
+
+function renderNode(status) {
+  if (!status?.nodes?.length) return;
+  const n = status.nodes[0];
+  document.getElementById('m-node').textContent = n.node_id;
+  document.getElementById('m-uptime').textContent = 'since ' + fmt_ts(n.registered_at);
+}
+
+async function renderServices(baseIp) {
+  const grid = document.getElementById('svc-grid');
+  grid.innerHTML = '';
+  const base = baseIp || window.location.hostname;
+
+  for (const svc of SERVICES) {
+    const url  = `http://${base}:${svc.port}${svc.path}`;
+    const open = `http://${base}:${svc.port}${svc.path}`;
+    const up   = await ping(url);
+
+    const card = document.createElement('div');
+    card.className = 'svc-card';
+    card.innerHTML = `
+      <div class="svc-header">
+        <div class="svc-name">${svc.icon} ${svc.name}</div>
+        <div class="svc-status ${up ? 'up' : 'down'}">${up ? 'UP' : 'DOWN'}</div>
+      </div>
+      <div class="svc-url">
+        ${svc.internal
+          ? `<span style="color:var(--muted)">internal</span>`
+          : `<a href="${open}" target="_blank">${open}</a>`}
+      </div>`;
+    grid.appendChild(card);
+  }
+}
+
+function renderEvents(events) {
+  const tbody = document.getElementById('events-body');
+  if (!events?.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:16px">No events yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = events.map(e => {
+    const cls = e.event_type === 'registered'    ? 'ev-registered'
+              : e.event_type === 're-registered' ? 'ev-reregistered'
+              : e.event_type === 'offline'       ? 'ev-offline' : '';
+    return `<tr>
+      <td style="color:var(--muted)">${fmt_ts(e.ts)}</td>
+      <td>${e.node_id}</td>
+      <td class="${cls}">${e.event_type}</td>
+      <td style="color:var(--muted)">${e.detail || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Main refresh
+///////////////////////////////////////////////////////////////////////////////
+
+let startTs = Date.now();
+
+async function refresh() {
+  const pill = document.getElementById('conn-pill');
+  pill.className = 'pill loading';
+  pill.innerHTML = '<span class="spin"></span>Fetching';
+
+  try {
+    const [status, metrics] = await Promise.all([
+      apiFetch('/status'),
+      apiFetch('/metrics/json'),
+    ]);
+
+    renderMetrics(metrics);
+    renderNode(status);
+    renderEvents(status.events);
+
+    const ip = status.nodes?.[0]?.ip || window.location.hostname;
+    await renderServices(ip === '127.0.0.1' ? window.location.hostname : ip);
+
+    pill.className = 'pill ok';
+    pill.textContent = '● Online';
+    document.getElementById('last-update').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+  } catch (err) {
+    pill.className = 'pill error';
+    pill.textContent = '✕ ' + err.message;
+  }
+}
+
+refresh();
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>

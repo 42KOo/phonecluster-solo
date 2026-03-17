@@ -1,0 +1,7 @@
+#!/bin/sh
+# s6 service: syncthing — LAN file sync
+exec syncthing serve \
+    --no-browser \
+    --no-restart \
+    --home=/data/phonecluster/syncthing \
+    2>&1

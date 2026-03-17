@@ -1,0 +1,6 @@
+#!/bin/sh
+# s6 service: caddy — single reverse proxy for all services
+exec caddy run \
+    --config /etc/caddy/Caddyfile \
+    --adapter caddyfile \
+    2>&1

@@ -1,0 +1,7 @@
+#!/bin/sh
+# s6 service: coordinator — cluster API + heartbeat tracker
+. /etc/phonecluster/config.env
+export PC_DB_PATH="/data/phonecluster/coordinator.db"
+export PC_API_KEY="${PC_API_KEY:-changeme}"
+export PC_COORDINATOR_PORT="${COORDINATOR_PORT:-7000}"
+exec python3 /opt/coordinator/coordinator.py 2>&1

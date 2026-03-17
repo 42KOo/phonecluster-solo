@@ -1,0 +1,8 @@
+#!/bin/sh
+# s6 service: filebrowser — web file manager
+exec filebrowser \
+    --address 127.0.0.1 \
+    --port 8081 \
+    --root /data/phonecluster/files \
+    --database /data/phonecluster/filebrowser.db \
+    2>&1
