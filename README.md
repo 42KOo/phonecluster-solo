@@ -2,8 +2,8 @@
 
 > One phone. Full stack. Zero waste.
 
-Everything from the multi-phone PhoneCluster — NAS, file sync, web dashboard,
-metrics, and optional offsite backup — running on a single Android phone via
+Everything from the multi-phone PhoneCluster - NAS, file sync, web dashboard,
+metrics, and optional offsite backup - running on a single Android phone via
 Termux + a real Arch Linux ARM rootfs.
 
 ---
@@ -12,20 +12,20 @@ Termux + a real Arch Linux ARM rootfs.
 
 ```
 Termux (host)
-└── proot → Arch Linux ARM rootfs
-      └── s6-svscan supervises:
-            ├── caddy          :8080  — reverse proxy, all services behind clean paths
-            ├── coordinator    :7777  — REST API + heartbeat tracker (internal)
-            ├── filebrowser    :8081  — web file manager (internal → /files)
-            ├── syncthing      :8384  — LAN file sync   (internal → /sync)
-            ├── node-exporter  :9100  — Prometheus metrics (internal → /metrics)
-            └── rclone                — offsite backup loop (optional)
+|-- proot -> Arch Linux ARM rootfs
+      |-- s6-svscan supervises:
+            |-- caddy          :8080  - reverse proxy, all services behind clean paths
+            |-- coordinator    :7777  - REST API + heartbeat tracker (internal)
+            |-- filebrowser    :8081  - web file manager (internal -> /files)
+            |-- syncthing      :8384  - LAN file sync   (internal -> /sync)
+            |-- node-exporter  :9100  - Prometheus metrics (internal -> /metrics)
+            |-- rclone                - offsite backup loop (optional)
 
 Dashboard:    http://<phone-ip>:7000
 All services: http://<phone-ip>:8080
 ```
 
-The coordinator self-registers the node and sends its own heartbeat — no separate
+The coordinator self-registers the node and sends its own heartbeat - no separate
 agent needed for single-phone mode.
 
 ---
@@ -34,7 +34,7 @@ agent needed for single-phone mode.
 
 ### 1. Install Termux + Termux:Boot
 
-Get both from **F-Droid** (not the Play Store — the Play Store version is outdated).
+Get both from **F-Droid** (not the Play Store - the Play Store version is outdated).
 
 - [Termux](https://f-droid.org/packages/com.termux/)
 - [Termux:Boot](https://f-droid.org/packages/com.termux.boot/)
@@ -50,9 +50,19 @@ cd ~/phonecluster
 sh install.sh
 ```
 
+**What the installer does:**
+- Bootstraps Arch Linux ARM rootfs via `proot-distro` (first run only)
+- Installs base packages (caddy, syncthing, rclone, node-exporter, python, etc.)
+- Builds **s6**, **s6-rc**, and **execline** from source (these are not in Arch ARM repos)
+- Downloads and installs **filebrowser** binary
+- Deploys service definitions and configuration
+- Sets up Termux:Boot startup script
+
+**Note:** Building s6 from source takes **5-15 minutes** on the device. The installer will patch `proot-distro` for Termux compatibility automatically.
+
 Answer two prompts:
-- **Node name** — any short label, e.g. `my-phone`
-- **API key** — used to authenticate dashboard and API requests
+- **Node name** - any short label, e.g. `my-phone`
+- **API key** - used to authenticate dashboard and API requests
 
 ### 3. Disable battery optimisation
 
@@ -60,7 +70,7 @@ This is the single most important step. Without it, Android will kill your
 services randomly within minutes.
 
 ```
-Settings → Apps → Termux → Battery → Unrestricted
+Settings -> Apps -> Termux -> Battery -> Unrestricted
 ```
 
 ### 4. Start
@@ -69,7 +79,7 @@ Settings → Apps → Termux → Battery → Unrestricted
 sh ~/.termux/boot/start-cluster.sh
 ```
 
-Or just reboot — Termux:Boot will start it automatically.
+Or just reboot - Termux:Boot will start it automatically.
 
 ---
 
@@ -83,7 +93,7 @@ Or just reboot — Termux:Boot will start it automatically.
 | Metrics | `http://<phone-ip>:8080/metrics` |
 | Health check | `http://<phone-ip>:8080/ping` |
 
-Find your phone's IP: **Settings → Wi-Fi → tap your network → IP address**
+Find your phone's IP: **Settings -> Wi-Fi -> tap your network -> IP address**
 
 ---
 
@@ -95,9 +105,9 @@ Shows:
 - Live CPU / memory / storage gauges
 - Service status (Up/Down ping checks)
 - Node registration and event log
-- Auto-refreshes every 15 seconds
+- Auto-refreshes every 5-15 seconds
 
-First time: click ⚙ Config and set the coordinator URL to
+First time: click the gear icon ([GEAR] Config) and set the coordinator URL to
 `http://<phone-ip>:7000` and your API key.
 
 ---
@@ -130,10 +140,10 @@ The rclone s6 service will pick up the config on next restart and begin syncing
 
 ## Optional containers (MinIO, Gitea, etc.)
 
-`phonecluster-run` lets you run OCI images via proot — no Docker daemon:
+`phonecluster-run` lets you run OCI images via proot - no Docker daemon:
 
 ```sh
-# Inside the rootfs — install skopeo + umoci first:
+# Inside the rootfs - install skopeo + umoci first:
 pacman -S skopeo umoci
 
 # Run MinIO
@@ -186,25 +196,25 @@ s6-svscanctl -r /run/service
 
 ```
 phonecluster/
-├── install.sh               # Interactive installer
-├── bootstrap-rootfs.sh      # proot-distro Arch ARM bootstrap
-├── bin/
-│   └── phonecluster-run     # proot OCI container shim
-├── boot/
-│   └── start-cluster.sh     # Termux:Boot watchdog entry point
-├── config/
-│   └── Caddyfile.solo       # Reverse proxy config template
-├── coordinator/
-│   └── coordinator.py       # Flask API (self-registers in solo mode)
-├── dashboard/
-│   └── index.html           # Single-file dashboard with live metrics
-└── services/                # s6 service run scripts
-    ├── caddy/run
-    ├── coordinator/run
-    ├── syncthing/run
-    ├── filebrowser/run
-    ├── node-exporter/run
-    └── rclone/run
+|-- install.sh               # Interactive installer
+|-- bootstrap-rootfs.sh      # proot-distro Arch ARM bootstrap
+|-- bin/
+|   |-- phonecluster-run     # proot OCI container shim
+|-- boot/
+|   |-- start-cluster.sh     # Termux:Boot watchdog entry point
+|-- config/
+|   |-- Caddyfile.solo       # Reverse proxy config template
+|-- coordinator/
+|   |-- coordinator.py       # Flask API (self-registers in solo mode)
+|-- dashboard/
+|   |-- index.html           # Single-file dashboard with live metrics
+|-- services/                # s6 service run scripts
+    |-- caddy/run
+    |-- coordinator/run
+    |-- syncthing/run
+    |-- filebrowser/run
+    |-- node-exporter/run
+    |-- rclone/run
 ```
 
 ---
@@ -212,21 +222,29 @@ phonecluster/
 ## Troubleshooting
 
 **Services die after a few minutes**
-→ Battery optimisation for Termux is still enabled. Disable it (see Install step 3).
+-> Battery optimisation for Termux is still enabled. Disable it (see Install step 3).
 
 **Dashboard says "Coordinator offline"**
-→ Check `~/phonecluster-boot.log` for proot session errors.
-→ Manually test: `proot-distro login archlinux -- curl http://127.0.0.1:7777/health`
+-> Check `~/phonecluster-boot.log` for proot session errors.
+-> Manually test: `proot-distro login archlinux -- curl http://127.0.0.1:7777/health`
 
 **Caddy 403 / 404 on /files or /sync**
-→ The upstream service may not have started yet. Check s6 status inside rootfs:
+-> The upstream service may not have started yet. Check s6 status inside rootfs:
    `s6-svstat /run/service/*`
 
 **Syncthing won't open in browser**
-→ Syncthing binds to `127.0.0.1:8384` by default. Caddy proxies it at `/sync`.
-→ On first run, Syncthing needs to be configured — go to `http://<ip>:8080/sync`
+-> Syncthing binds to `127.0.0.1:8384` by default. Caddy proxies it at `/sync`.
+-> On first run, Syncthing needs to be configured - go to `http://<ip>:8080/sync`
    and follow its web UI.
 
 **proot-distro install fails**
-→ Make sure storage is not full: `df -h`
-→ Try: `pkg reinstall proot-distro`
+-> Make sure storage is not full: `df -h`
+-> Try: `pkg reinstall proot-distro`
+
+**s6/filebrowser package not found**
+-> These are built from source; the installer handles this automatically.
+-> Ensure `base-devel` is installed (`pacman -S base-devel` inside rootfs) if building manually.
+
+**Install takes too long / hangs on s6 build**
+-> Building s6, execline, and s6-rc can take 5-15 minutes depending on device speed.
+-> This is normal; let it run. Monitor with `tail -f ~/phonecluster-boot.log` if needed.
