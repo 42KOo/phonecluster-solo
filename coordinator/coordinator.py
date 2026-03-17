@@ -18,7 +18,6 @@ import time
 import sqlite3
 import threading
 import logging
-import subprocess
 import json
 import socket
 from flask import Flask, request, jsonify, abort
@@ -33,6 +32,7 @@ API_KEY        = os.environ.get("PC_API_KEY",         "changeme")
 PORT           = int(os.environ.get("PC_COORDINATOR_PORT", 7777))
 HEARTBEAT_TTL  = int(os.environ.get("PC_HEARTBEAT_TTL",   90))
 SWEEP_INTERVAL = 30
+CONFIG_FILE    = "/etc/phonecluster/config.env"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -118,10 +118,9 @@ def sweeper():
 ###############################################################################
 
 def self_register():
-    config_path = "/etc/phonecluster/config.env"
     cfg = {}
     try:
-        with open(config_path) as f:
+        with open(CONFIG_FILE) as f:
             for line in f:
                 line = line.strip()
                 if "=" in line and not line.startswith("#"):
@@ -158,10 +157,9 @@ def self_register():
 ###############################################################################
 
 def self_heartbeat():
-    config_path = "/etc/phonecluster/config.env"
     node_id = "solo-node"
     try:
-        with open(config_path) as f:
+        with open(CONFIG_FILE) as f:
             for line in f:
                 if line.startswith("NODE_ID="):
                     node_id = line.strip().split("=", 1)[1]
@@ -221,7 +219,9 @@ def read_mem():
 def read_disk():
     try:
         import shutil
-        usage = shutil.disk_usage("/data/phonecluster")
+        # Fall back to / if the data dir doesn't exist yet (e.g. CI or fresh install)
+        path = "/data/phonecluster" if os.path.exists("/data/phonecluster") else "/"
+        usage = shutil.disk_usage(path)
         return {
             "total_gb": round(usage.total / 1e9, 1),
             "used_gb":  round(usage.used  / 1e9, 1),

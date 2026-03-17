@@ -57,8 +57,20 @@ class TestSelfRegister:
         config = tmp_path / "config.env"
         config.write_text("NODE_ID=test-solo\nNODE_ROLE=solo\n")
 
+        # Patch the config path constant directly — avoids clobbering sqlite's open calls
         import unittest.mock as mock
-        with mock.patch("builtins.open", mock.mock_open(read_data=config.read_text())):
+        with mock.patch.object(tmp_db, "__file__", str(tmp_path)):
+            original = tmp_db.self_register.__code__.co_consts
+            # Simplest safe approach: monkeypatch the config path via env or direct call
+            pass
+
+        # Write to the exact path the coordinator reads
+        real_config = "/tmp/phonecluster_test_config.env"
+        with open(real_config, "w") as f:
+            f.write("NODE_ID=test-solo\nNODE_ROLE=solo\n")
+
+        import unittest.mock as mock
+        with mock.patch("coordinator.coordinator.CONFIG_FILE", real_config):
             tmp_db.self_register()
 
         conn = sqlite3.connect(os.environ["PC_DB_PATH"])
@@ -67,16 +79,19 @@ class TestSelfRegister:
 
     def test_self_register_idempotent(self, tmp_db, tmp_path):
         """Calling self_register() twice should not error or duplicate the node."""
-        config = tmp_path / "config.env"
-        config.write_text("NODE_ID=test-solo\nNODE_ROLE=solo\n")
+        real_config = "/tmp/phonecluster_test_config_idem.env"
+        with open(real_config, "w") as f:
+            f.write("NODE_ID=test-solo-idem\nNODE_ROLE=solo\n")
 
         import unittest.mock as mock
-        with mock.patch("builtins.open", mock.mock_open(read_data=config.read_text())):
+        with mock.patch("coordinator.coordinator.CONFIG_FILE", real_config):
             tmp_db.self_register()
             tmp_db.self_register()
 
         conn = sqlite3.connect(os.environ["PC_DB_PATH"])
-        count = conn.execute("SELECT COUNT(*) FROM nodes WHERE node_id='test-solo'").fetchone()[0]
+        count = conn.execute(
+            "SELECT COUNT(*) FROM nodes WHERE node_id='test-solo-idem'"
+        ).fetchone()[0]
         assert count == 1
 
 ###############################################################################

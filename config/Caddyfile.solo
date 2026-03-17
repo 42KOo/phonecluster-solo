@@ -16,10 +16,7 @@
     }
 
     # Node info
-    respond /info 200 {
-        body `{"node":"{{NODE_ID}}","role":"solo","version":"1.0.0"}`
-        close
-    }
+    respond /info "node={{NODE_ID}} role=solo version=1.0.0" 200
 
     # File Browser — web UI for /data/phonecluster/files
     handle /files* {
@@ -41,33 +38,9 @@
         reverse_proxy 127.0.0.1:9100
     }
 
-    # Index — quick nav
+    # Index — redirect to dashboard
     handle / {
-        respond `<!DOCTYPE html>
-<html><head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PhoneCluster — {{NODE_ID}}</title>
-<style>
-  body{background:#0d1117;color:#e6edf3;font-family:monospace;
-       display:flex;flex-direction:column;align-items:center;
-       justify-content:center;min-height:100vh;gap:12px;margin:0}
-  h1{font-size:18px;margin-bottom:8px}
-  a{display:block;padding:10px 24px;border:1px solid #30363d;
-    border-radius:8px;text-decoration:none;color:#58a6ff;
-    background:#161b22;min-width:200px;text-align:center}
-  a:hover{background:#1f2937}
-  small{color:#8b949e}
-</style>
-</head><body>
-<h1>📱 PhoneCluster · {{NODE_ID}}</h1>
-<small>Solo node</small>
-<a href="/files">📁 File Browser</a>
-<a href="/sync">🔄 Syncthing</a>
-<a href="/metrics">📊 Metrics</a>
-<a href="http://localhost:7000">🖥 Dashboard</a>
-<a href="/ping">❤ Health</a>
-</body></html>` 200
+        redir / http://localhost:7000 302
     }
 }
 
@@ -91,12 +64,6 @@
         file_server
     }
 
-    # Root → dashboard
+    # Root redirects to dashboard
     redir / /dashboard/ 302
-
-    # Also serve dashboard at bare /
-    handle {
-        root * /opt/dashboard
-        file_server
-    }
 }
