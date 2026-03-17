@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-PhoneCluster Coordinator — Solo edition
+PhoneCluster Coordinator - Solo edition
 
 Endpoints:
-  POST /register       — node registration
-  POST /heartbeat      — keepalive
-  GET  /status         — full cluster status (JSON)
-  GET  /nodes          — node list
-  GET  /health         — coordinator health check
-  GET  /metrics/json   — quick metrics snapshot (cpu, mem, disk)
+  POST /register       - node registration
+  POST /heartbeat      - keepalive
+  GET  /status         - full cluster status (JSON)
+  GET  /nodes          - node list
+  GET  /health         - coordinator health check
+  GET  /metrics/json   - quick metrics snapshot (cpu, mem, disk)
 """
 
 import logging
@@ -20,6 +20,7 @@ import time
 from functools import wraps
 
 from flask import Flask, abort, jsonify, request
+
 
 ###############################################################################
 # Config

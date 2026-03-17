@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/sh
-# bootstrap-rootfs.sh — Bootstrap Arch Linux ARM via proot-distro
+# bootstrap-rootfs.sh - Bootstrap Arch Linux ARM via proot-distro
 set -e
 
 info() { printf '\033[1;34m[INFO]\033[0m  %s\n' "$*"; }
@@ -9,7 +9,7 @@ die()  { printf '\033[1;31m[ERR ]\033[0m  %s\n' "$*" >&2; exit 1; }
 ROOTFS="$PREFIX/var/lib/proot-distro/installed-rootfs/archlinux"
 
 if [ -d "$ROOTFS/usr" ]; then
-    ok "Rootfs already exists — skipping."
+    ok "Rootfs already exists - skipping."
     exit 0
 fi
 

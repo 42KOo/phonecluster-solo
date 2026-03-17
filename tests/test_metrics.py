@@ -1,6 +1,6 @@
 """
 tests/test_metrics.py
-Tests for the /metrics/json endpoint — verifies shape, types, and plausible ranges.
+Tests for the /metrics/json endpoint - verifies shape, types, and plausible ranges.
 Coordinator must be running before these run.
 """
 

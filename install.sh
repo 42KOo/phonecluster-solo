@@ -1,5 +1,5 @@
 #!/data/data/com.termux/files/usr/bin/sh
-# PhoneCluster Solo — single-phone installer
+# PhoneCluster Solo - single-phone installer
 set -e
 
 PC_DIR="$HOME/phonecluster-solo"
@@ -17,7 +17,7 @@ cat <<'BANNER'
 | |_) | '_ \ / _ \| '_ \ / _ \___ \| | | | / __| __/ _ \ '__|
 |  __/| | | | (_) | | | |  __/___) | | |_| \__ \ ||  __/ |
 |_|   |_| |_|\___/|_| |_|\___|____/|_|\__,_|___/\__\___|_|
-                          [ SOLO — single phone edition ]
+                          [ SOLO - single phone edition ]
 BANNER
 echo ""
 
@@ -28,6 +28,11 @@ echo ""
 [ -d "$PREFIX" ] || die "Must run inside Termux."
 command -v proot-distro >/dev/null 2>&1 || pkg install -y proot-distro
 command -v python      >/dev/null 2>&1 || pkg install -y python
+
+# Ensure proot-distro works under Termux: it erroneously blocks ANY proot tracer.
+# Patch the check to only block nested proot-distro (the intended behavior).
+info "Configuring proot-distro for Termux..."
+sed -i 's/if \[ "$TRACER_NAME" = "proot" \]/if [ "$TRACER_NAME" = "proot-distro" ]/' /data/data/com.termux/files/usr/bin/proot-distro 2>/dev/null || true
 
 ###############################################################################
 # Node ID
@@ -53,23 +58,81 @@ info "Bootstrapping Arch Linux ARM rootfs..."
 sh "$PC_DIR/bootstrap-rootfs.sh"
 
 ###############################################################################
-# Install all packages
+# Install base packages (those available in repos)
 ###############################################################################
 
-info "Installing packages..."
+info "Installing base packages..."
 proot-distro login archlinux -- pacman -Sy --noconfirm --needed \
-    s6 s6-rc execline \
+    base-devel \
     caddy \
     syncthing \
-    filebrowser \
     rclone \
     prometheus-node-exporter \
     python python-pip \
     curl wget jq \
-    procps-ng iproute2
+    procps-ng iproute2 \
+    git
 
 proot-distro login archlinux -- \
     pip install flask --break-system-packages --quiet
+
+###############################################################################
+# Build and install skalibs, s6, s6-rc, execline from source (not in Arch ARM repos)
+###############################################################################
+
+info "Building s6 suite from source (this may take 5-10 minutes)..."
+proot-distro login archlinux -- sh -c '
+    set -e
+    TMPDIR=$(mktemp -d)
+    cd "$TMPDIR"
+    MAKEFLAGS="-j$(nproc)"
+
+    # skalibs (common dependency)
+    echo "Downloading skalibs..."
+    curl -sL https://github.com/skarnet/skalibs/releases/download/2.14.1.0/skalibs-2.14.1.0.tar.gz | tar xz
+    cd skalibs-*
+    ./configure --prefix=/usr && make $MAKEFLAGS && make install
+    cd "$TMPDIR"
+
+    # s6
+    echo "Downloading s6..."
+    curl -sL https://github.com/skarnet/s6/releases/download/v2.12.0.0/s6-2.12.0.0.tar.gz | tar xz
+    cd s6-*
+    ./configure --prefix=/usr && make $MAKEFLAGS && make install
+    cd "$TMPDIR"
+
+    # execline
+    echo "Downloading execline..."
+    curl -sL https://github.com/skarnet/execline/releases/download/v2.9.5.0/execline-2.9.5.0.tar.gz | tar xz
+    cd execline-*
+    ./configure --prefix=/usr && make $MAKEFLAGS && make install
+    cd "$TMPDIR"
+
+    # s6-rc
+    echo "Downloading s6-rc..."
+    curl -sL https://github.com/skarnet/s6-rc/releases/download/v0.5.4.0/s6-rc-0.5.4.0.tar.gz | tar xz
+    cd s6-rc-*
+    ./configure --prefix=/usr && make $MAKEFLAGS && make install
+    cd "$TMPDIR"
+
+    rm -rf "$TMPDIR"
+    echo "s6 suite installed to /usr"
+'
+
+###############################################################################
+# Install filebrowser (download binary)
+###############################################################################
+
+info "Installing filebrowser..."
+proot-distro login archlinux -- sh -c '
+    set -e
+    FILEBROWSER_VERSION="2.28.0"
+    ARCH="aarch64"
+    curl -sL "https://github.com/filebrowser/filebrowser/releases/download/v${FILEBROWSER_VERSION}/filebrowser-${FILEBROWSER_VERSION}-linux-${ARCH}.tar.gz" | tar xz -C /usr/local/bin
+    chmod +x /usr/local/bin/filebrowser
+    ln -sf /usr/local/bin/filebrowser /usr/bin/filebrowser
+    echo "filebrowser installed"
+'
 
 ###############################################################################
 # Data dirs inside rootfs
@@ -156,15 +219,15 @@ LOCAL_IP="$(ip route get 1 2>/dev/null | awk '{print $7; exit}' || echo 'YOUR-IP
 echo ""
 ok "PhoneCluster Solo installation complete!"
 echo ""
-echo "  ┌─────────────────────────────────────────────────┐"
-echo "  │  Dashboard      http://$LOCAL_IP:7000          │"
-echo "  │  Files          http://$LOCAL_IP:8080/files    │"
-echo "  │  Syncthing      http://$LOCAL_IP:8080/sync     │"
-echo "  │  Metrics        http://$LOCAL_IP:8080/metrics  │"
-echo "  └─────────────────────────────────────────────────┘"
+echo "  +-------------------------------------------------+"
+echo "  |  Dashboard      http://$LOCAL_IP:7000          |"
+echo "  |  Files          http://$LOCAL_IP:8080/files    |"
+echo "  |  Syncthing      http://$LOCAL_IP:8080/sync     |"
+echo "  |  Metrics        http://$LOCAL_IP:8080/metrics  |"
+echo "  +-------------------------------------------------+"
 echo ""
 warn "ACTION: Disable battery optimisation for Termux"
-warn "  Settings → Apps → Termux → Battery → Unrestricted"
+warn "  Settings -> Apps -> Termux -> Battery -> Unrestricted"
 echo ""
 echo "  Start now:  sh $BOOT_DIR/start-cluster.sh"
 echo ""

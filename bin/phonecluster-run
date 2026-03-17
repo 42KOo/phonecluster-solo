@@ -1,5 +1,5 @@
 #!/bin/sh
-# phonecluster-run — proot-based OCI container runner
+# phonecluster-run - proot-based OCI container runner
 # Replaces uDocker. No Docker daemon, no kernel compatibility hell.
 #
 # Usage:
@@ -28,7 +28,7 @@ while [ $# -gt 0 ]; do
         --name)   NAME="$2";           shift 2 ;;
         --env)    ENVS="$ENVS $2";    shift 2 ;;
         --volume) VOLUMES="$VOLUMES $2"; shift 2 ;;
-        --port)   shift 2 ;;  # informational only — proot shares host network
+        --port)   shift 2 ;;  # informational only - proot shares host network
         --pull)   DO_PULL=1; shift ;;
         --rm)     DO_RM=1;   shift ;;
         --)       shift; EXTRA_CMD="$*"; break ;;
